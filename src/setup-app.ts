@@ -10,15 +10,15 @@ import { testingRouter } from './testing/routers/testing.router';
 import { usersRouter } from './users/routers/users.router';
 // import { authRouter } from './auth/routers/auth.router';
 import { securityRouter } from './securityDevices/routers/security.router';
-import cookieParser from 'cookie-parser';
+// import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { staticsRouter } from './statics/routers/statics.router';
 import { interactionRouter } from './interaction/routers/interaction.routers';
 
 
 export const setupApp = (app: Express) => {
-  app.use(cookieParser());
-  app.set('trust proxy', true);
+  // app.use(cookieParser());
+  // app.set('trust proxy', true);
 
   app.use(cors());
   app.use(express.json()); // middleware для парсинга JSON в теле запроса
