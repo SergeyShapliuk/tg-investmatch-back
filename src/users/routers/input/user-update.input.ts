@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 
 
 export type UserUpdateInput = {
@@ -11,20 +11,4 @@ export type UserUpdateInput = {
   project_stages?: string[];
   user_types?: string[];
   wallet?: string;
-=======
-import { ResourceType } from '../../../core/types/resource-type';
-
-
-export type UserUpdateInput = {
-  // data: {
-  //     type: ResourceType.Posts;
-  //     id: string;
-  //     attributes: PostAttributes;
-  // };
-  id: string;
-  title: string;
-  shortDescription: string;
-  content: string;
-  blogId: string;
->>>>>>> origin/main
 };

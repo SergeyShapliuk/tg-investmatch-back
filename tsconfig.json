@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
-<<<<<<< HEAD
     "target": "es2020",
     "lib": ["es2020", "es2021", "dom"],
-=======
-    "target": "es2016",
->>>>>>> origin/main
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",

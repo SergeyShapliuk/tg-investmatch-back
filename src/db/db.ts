@@ -2,7 +2,6 @@ import { Collection, Db, MongoClient } from 'mongodb';
 
 import { SETTINGS } from '../core/settings/settings';
 import { User } from '../users/domain/user.model';
-<<<<<<< HEAD
 import { BlacklistedToken, ensureTTLIndex } from '../auth/routers/guard/refreshTokenBlacklistService';
 import { SessionDevice } from '../securityDevices/domain/sessionDevice';
 import * as mongoose from 'mongoose';
@@ -21,29 +20,16 @@ export const COMMENT_LIKE_COLLECTION_NAME = 'commentLike';
 export const INTERACTION_COLLECTION_NAME = 'interaction';
 export const STATICS_FORM_COLLECTION_NAME = 'forms';
 export const STATICS_CURRENCY_COLLECTION_NAME = 'currencies';
-=======
-import * as mongoose from 'mongoose';
-import { Task } from '../tasks/application/dtos/task.attributes';
-
-export const USERS_COLLECTION_NAME = 'users';
-export const TASKS_COLLECTION_NAME = 'tasks';
-
->>>>>>> origin/main
 
 export let client: MongoClient;
 // export let videoCollection: Collection<Video>;
 export let userCollection: Collection<User>;
-<<<<<<< HEAD
 export let tokenBlacklistCollection: Collection<BlacklistedToken>;
 export let devicesCollection: Collection<SessionDevice>;
 export let commentCollection: Collection<Comment>;
 export let interactionCollection: Collection<Interaction>;
 export let staticsFormCollection: Collection<Form>;
 export let staticsCurrencyCollection: Collection<Currency>;
-=======
-// export let tokenBlacklistCollection: Collection<BlacklistedToken>;
-export let tasksCollection: Collection<Task>;
->>>>>>> origin/main
 
 
 // Подключения к бд
@@ -54,16 +40,12 @@ export async function runDB(url: string): Promise<void> {
   // Инициализация коллекций
   // videoCollection = db.collection<Video>(VIDEOS_COLLECTION_NAME);
   userCollection = db.collection<User>(USERS_COLLECTION_NAME);
-<<<<<<< HEAD
   tokenBlacklistCollection = db.collection<BlacklistedToken>(TOKEN_BLACKLIST_COLLECTION);
   devicesCollection = db.collection<SessionDevice>(DEVICES_COLLECTION_NAME);
   commentCollection = db.collection<Comment>(COMMENTS_COLLECTION_NAME);
   interactionCollection = db.collection<Interaction>(INTERACTION_COLLECTION_NAME);
   staticsFormCollection = db.collection<Form>(STATICS_FORM_COLLECTION_NAME);
   staticsCurrencyCollection = db.collection<Currency>(STATICS_CURRENCY_COLLECTION_NAME);
-=======
-  tasksCollection = db.collection<Task>(TASKS_COLLECTION_NAME);
->>>>>>> origin/main
   // await ensureTTLIndex();
   // await ensureDevicesTTLIndex();
   // await postLikeCollection.dropIndex("userId_1_commentId_1")
@@ -81,7 +63,6 @@ export async function runDB(url: string): Promise<void> {
   }
 }
 
-<<<<<<< HEAD
 // TTL индекс для автоматической очистки устаревших устройств
 async function ensureDevicesTTLIndex() {
   try {
@@ -94,8 +75,6 @@ async function ensureDevicesTTLIndex() {
     console.error('❌ Error creating devices TTL index:', error);
   }
 }
-=======
->>>>>>> origin/main
 
 // для тестов
 export async function stopDb() {

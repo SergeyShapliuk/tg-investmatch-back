@@ -1,10 +1,6 @@
 {
   "version": 2,
-<<<<<<< HEAD
   "name": "homeTask01",
-=======
-  "name": "tg-sup-back",
->>>>>>> origin/main
   "builds": [
     {
       "src": "src/index.ts",

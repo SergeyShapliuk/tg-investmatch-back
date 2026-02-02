@@ -15,17 +15,6 @@ export const tgIdValidation = param('telegram_id')
   .withMessage('ID must be a string') // Проверка, что это строка
   // .isMongoId()
   // .withMessage('Неверный формат ObjectId');
-<<<<<<< HEAD
-=======
-  //
-  export const tgIdValidationBody = body('telegram_id')
-  .exists()
-  .withMessage('ID is required') // Проверка на наличие
-  .isString()
-  .withMessage('ID must be a string') // Проверка, что это строка
-  // .isMongoId()
-  // .withMessage('Неверный формат ObjectId');
->>>>>>> origin/main
 
 export const blogIdValidation = param('blogId')
   .exists()

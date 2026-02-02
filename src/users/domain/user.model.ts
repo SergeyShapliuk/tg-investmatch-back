@@ -1,32 +1,18 @@
-<<<<<<< HEAD
+
 import mongoose, { HydratedDocument, Model } from "mongoose";
 import { USERS_COLLECTION_NAME } from '../../db/db';
 
 
 
-=======
-import mongoose, { HydratedDocument, Model } from 'mongoose';
-import { USERS_COLLECTION_NAME } from '../../db/db';
-
-
->>>>>>> origin/main
 /* =======================
    Types
 ======================= */
 
-<<<<<<< HEAD
 export type Donuts = {
   current_amount: string;
   purpose_amount: string;
   currency: string;
 };
-=======
-// export type Donuts = {
-//   current_amount: string;
-//   purpose_amount: string;
-//   currency: string;
-// };
->>>>>>> origin/main
 
 export interface User {
   tg_id: string;
@@ -38,7 +24,6 @@ export interface User {
   created_at: string;
   updated_at: string;
 
-<<<<<<< HEAD
   user_types: string[];
   industries: string[];
   business_models: string[];
@@ -55,16 +40,6 @@ export interface User {
 
   donuts: Donuts;
   hashtags: { [key: string]: string[] };
-=======
-  amount: number;
-  time_end: number;
-  time_start: number;
-  timer_active: boolean;
-  // photos: any[];
-
-  // donuts: Donuts;
-  // hashtags: { [key: string]: string[] };
->>>>>>> origin/main
 }
 
 type UserModel = Model<User>;
@@ -75,7 +50,6 @@ export type UserDocument = HydratedDocument<User>;
 ======================= */
 
 // Donuts
-<<<<<<< HEAD
 const donutsSchema = new mongoose.Schema<Donuts>(
   {
     current_amount: { type: String, default: "0" },
@@ -90,16 +64,6 @@ const hashtagsSchema = new mongoose.Schema(
   {},
   { _id: false, strict: false }
 );
-=======
-// const donutsSchema = new mongoose.Schema<Donuts>(
-//   {
-//     current_amount: { type: String, default: '0' },
-//     purpose_amount: { type: String, default: '0' },
-//     currency: { type: String, default: 'USD' },
-//   },
-//   { _id: false },
-// );
->>>>>>> origin/main
 
 /* =======================
    Main User Schema
@@ -107,22 +71,14 @@ const hashtagsSchema = new mongoose.Schema(
 
 const UserSchema = new mongoose.Schema<User>({
   tg_id: { type: String, required: true, unique: true },
-<<<<<<< HEAD
   tg_firstname: { type: String, default: "" },
   tg_lastname: { type: String, default: "" },
   tg_nick: { type: String, default: "" },
   tg_language: { type: String, default: "en" },
-=======
-  tg_firstname: { type: String, default: '' },
-  tg_lastname: { type: String, default: '' },
-  tg_nick: { type: String, default: '' },
-  tg_language: { type: String, default: 'en' },
->>>>>>> origin/main
 
   created_at: { type: String, default: () => new Date().toISOString() },
   updated_at: { type: String, default: () => new Date().toISOString() },
 
-<<<<<<< HEAD
   user_types: { type: [String], default: [] },
   industries: { type: [String], default: [] },
   business_models: { type: [String], default: [] },
@@ -177,40 +133,4 @@ UserSchema.index({ updated_at: -1 }); // для получения свежих 
 export const UserModel = mongoose.model<User, UserModel>(
   USERS_COLLECTION_NAME,
   UserSchema
-=======
-  amount: { type: Number, default: 0 },
-  time_end: { type: Number, default: 0 },
-  time_start: { type: Number, default: 0 },
-  timer_active: { type: Boolean, default: false },
-
-  // name: { type: String, default: '' },
-  // wallet: { type: String, default: '' },
-  // description: { type: String, default: '' },
-  // photos: { type: [String], default: [] },
-
-  // donuts: {
-  //   type: donutsSchema,
-  //   default: () => ({
-  //     current_amount: '0',
-  //     purpose_amount: '0',
-  //     currency: 'USD',
-  //   }),
-  // },
-  //
-  // hashtags: {
-  //   type: Map,
-  //   of: [String],
-  //   default: {},
-  // },
-});
-
-/* =======================
-   Model
-======================= */
-UserSchema.index({ time_end: 1, timer_active: 1 });
-
-export const UserModel = mongoose.model<User, UserModel>(
-  USERS_COLLECTION_NAME,
-  UserSchema,
->>>>>>> origin/main
 );
