@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+<<<<<<< HEAD
+    "target": "es2020",
+    "lib": ["es2020", "es2021", "dom"],
+=======
+    "target": "es2016",
+>>>>>>> origin/main
+    "module": "commonjs",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "__tests__",
+    "dist",
+    "node_modules"
+  ],
+  "files": [
+    "src/core/types/index.d.ts"
+  ]
+}
