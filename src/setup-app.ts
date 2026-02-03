@@ -34,6 +34,9 @@ export const setupApp = (app: Express) => {
   app.get('/', (req, res) => {
     res.status(HttpStatus.Ok).send('Investmatch');
   });
+  app.get('/healthz', (req, res) => {
+    res.status(HttpStatus.Ok).send('Investmatch health');
+  });
 
   // setupSwagger(app);
 
