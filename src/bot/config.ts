@@ -26,12 +26,12 @@ export const getBotConfig = (): BotConfig => {
   const envConfigs: Record<Environment, EnvironmentConfig> = {
     development: {
       token: process.env.TOKEN_BOT_DEV || '',
-      webAppUrl: 'https://tg-invesmatch.onrender.com/',
+      webAppUrl: 'https://tg-investmatch-back.onrender.com',
       // supportUrl: 'https://tg-bot-support-delta.vercel.app/',
     },
     production: {
       token: process.env.TOKEN_BOT_PROD || '',
-      webAppUrl: 'https://app.investmatch.com/',
+      webAppUrl: 'https://tg-investmatch-back.onrender.com',
       // supportUrl: undefined,
     },
     test: {
