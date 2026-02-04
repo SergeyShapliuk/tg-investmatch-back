@@ -1,0 +1,303 @@
+name: 🔄 Keep Two Servers Alive (8:00-20:00)
+
+on:
+  # Расписание (UTC+3)
+  schedule:
+    # 8:00-20:00 MSK = 5:00-17:00 UTC, проверка каждые 30 минут
+    - cron: '*/30 5-17 * * *'
+
+  # Ручной запуск в любое время
+  workflow_dispatch:
+    inputs:
+      skip_time_check:
+        description: 'Skip business hours check (ping anyway)'
+        required: false
+        default: 'false'
+
+# Настройка среды для всего workflow
+env:
+  TIMEZONE: 'Europe/Moscow'  # Часовой пояс для проверки времени
+  BUSINESS_HOURS_START: 8    # Начало рабочего дня (местное время)
+  BUSINESS_HOURS_END: 20     # Конец рабочего дня (местное время)
+
+jobs:
+  ping-servers:
+    # Запускаем на последнем Ubuntu от GitHub
+    runs-on: ubuntu-latest
+
+    # Ограничиваем время выполнения 10 минутами
+    timeout-minutes: 10
+
+    steps:
+      # Шаг 1: Проверяем, находимся ли мы в рабочее время
+      - name: ⏰ Проверить рабочее время
+        id: check_time
+        # Этот шаг выполняется только при автоматическом запуске по расписанию
+        if: github.event_name == 'schedule'
+        run: |
+          # Получаем текущее время в UTC
+          CURRENT_HOUR_UTC=$(date -u +%H)
+          echo "Текущее время UTC: $CURRENT_HOUR_UTC"
+
+          # Конвертируем в (UTC+3)
+          CURRENT_HOUR_MSK=$((10#$CURRENT_HOUR_UTC + 3))
+
+          # Если получилось 24 или больше, корректируем
+          if [ $CURRENT_HOUR_MSK -ge 24 ]; then
+            CURRENT_HOUR_MSK=$((CURRENT_HOUR_MSK - 24))
+          fi
+
+          echo "Текущее время: $CURRENT_HOUR_MSK"
+
+          # Проверяем, попадаем ли в рабочие часы 8:00-20:00
+          if [ $CURRENT_HOUR_MSK -ge ${{ env.BUSINESS_HOURS_START }} ] && [ $CURRENT_HOUR_MSK -lt ${{ env.BUSINESS_HOURS_END }} ]; then
+            echo "✅ Внутри рабочих часов (8:00-20:00 МСК)"
+            echo "should_ping=true" >> $GITHUB_OUTPUT
+            echo "msk_time=$CURRENT_HOUR_MSK" >> $GITHUB_OUTPUT
+          else
+            echo "⏰ Вне рабочих часов - пропускаем"
+            echo "should_ping=false" >> $GITHUB_OUTPUT
+            echo "msk_time=$CURRENT_HOUR_MSK" >> $GITHUB_OUTPUT
+          fi
+
+      # Шаг 2: Пинг первого сервера
+      - name: 📡 Пингнуть Сервер 1 (Основной API)
+        id: ping_server_1
+        # Выполняем если:
+        # 1. Ручной запуск ИЛИ
+        # 2. Автоматический запуск в рабочее время
+        if: github.event_name == 'workflow_dispatch' || steps.check_time.outputs.should_ping == 'true'
+        env:
+          # Берем URL из секретов GitHub
+          SERVER_1_URL: ${{ secrets.SERVER_1_URL }}
+#          # Опциональный токен для авторизации
+#          SERVER_1_TOKEN: ${{ secrets.SERVER_1_TOKEN }}
+        run: |
+          echo "🚀 Начинаю пинг Сервера 1..."
+
+          # Проверяем, установлен ли URL
+          if [ -z "$SERVER_1_URL" ]; then
+            echo "❌ ОШИБКА: SERVER_1_URL не установлен в секретах!"
+            echo "status=error" >> $GITHUB_OUTPUT
+            echo "message=SERVER_1_URL не настроен" >> $GITHUB_OUTPUT
+            exit 0  # Не прерываем весь workflow
+          fi
+
+          echo "URL: $SERVER_1_URL"
+
+          # Подготавливаем заголовки для запроса
+          HEADERS=""
+          if [ -n "$SERVER_1_TOKEN" ]; then
+            HEADERS="-H 'Authorization: Bearer $SERVER_1_TOKEN'"
+            echo "Используется токен авторизации"
+          fi
+
+          # Выполняем запрос с таймаутом 30 секунд
+          # 3 попытки с задержкой между ними
+          for ATTEMPT in {1..3}; do
+            echo "Попытка $ATTEMPT/3..."
+
+            # Выполняем HTTP запрос и сохраняем результат
+            RESPONSE=$(eval "curl -s $HEADERS \
+              -w 'HTTP_CODE:%{http_code}|TIME:%{time_total}' \
+              --max-time 30 \
+              '$SERVER_1_URL'" 2>/dev/null || true)
+
+            # Извлекаем HTTP код из ответа
+            HTTP_CODE=$(echo "$RESPONSE" | grep -o 'HTTP_CODE:[0-9]*' | cut -d: -f2)
+
+            # Проверяем успешность ответа
+            if [ -n "$HTTP_CODE" ]; then
+              if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+                # Успешный ответ 2xx
+                RESPONSE_TIME=$(echo "$RESPONSE" | grep -o 'TIME:[0-9.]*' | cut -d: -f2)
+                echo "✅ Сервер 1 ответил успешно!"
+                echo "HTTP код: $HTTP_CODE"
+                echo "Время ответа: ${RESPONSE_TIME} секунд"
+                echo "status=success" >> $GITHUB_OUTPUT
+                echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+                echo "response_time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
+                break  # Выходим из цикла попыток
+              elif [ "$HTTP_CODE" -ge 500 ]; then
+                # Ошибка сервера 5xx - пробуем снова
+                echo "⚠️ Сервер 1 вернул ошибку $HTTP_CODE"
+                if [ $ATTEMPT -lt 3 ]; then
+                  sleep 5  # Ждем перед следующей попыткой
+                fi
+              else
+                # Клиентская ошибка 4xx - не пробуем снова
+                echo "⚠️ Сервер 1 вернул клиентскую ошибку $HTTP_CODE"
+                echo "status=client_error" >> $GITHUB_OUTPUT
+                echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+                break
+              fi
+            else
+              # Не удалось получить HTTP код
+              echo "⚠️ Не удалось получить ответ от Сервера 1"
+              if [ $ATTEMPT -lt 3 ]; then
+                sleep $((ATTEMPT * 2))  # Увеличивающаяся задержка
+              fi
+            fi
+
+            # Если это последняя попытка и не удалось
+            if [ $ATTEMPT -eq 3 ]; then
+              echo "❌ Сервер 1 не ответил после 3 попыток"
+              echo "status=failed" >> $GITHUB_OUTPUT
+            fi
+          done
+
+      # Шаг 3: Пинг второго сервера
+      - name: 📡 Пингнуть Сервер 2 (Резервный/Второй API)
+        id: ping_server_2
+        if: github.event_name == 'workflow_dispatch' || steps.check_time.outputs.should_ping == 'true'
+        env:
+          SERVER_2_URL: ${{ secrets.SERVER_2_URL }}
+          SERVER_2_TOKEN: ${{ secrets.SERVER_2_TOKEN }}
+        run: |
+          echo "🚀 Начинаю пинг Сервера 2..."
+
+          if [ -z "$SERVER_2_URL" ]; then
+            echo "⚠️ ВНИМАНИЕ: SERVER_2_URL не установлен"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            echo "message=URL не настроен" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "URL: $SERVER_2_URL"
+
+          # Более простой вариант для второго сервера
+          START_TIME=$(date +%s)
+
+          # Используем wget как альтернативу curl
+          HTTP_CODE=$(wget --spider \
+            --server-response \
+            --timeout=30 \
+            --tries=2 \
+            "$SERVER_2_URL" 2>&1 | \
+            grep -o 'HTTP/[0-9.]* [0-9]*' | \
+            tail -1 | \
+            awk '{print $2}' || echo "000")
+
+          END_TIME=$(date +%s)
+          RESPONSE_TIME=$((END_TIME - START_TIME))
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "204" ]; then
+            echo "✅ Сервер 2 работает!"
+            echo "HTTP код: $HTTP_CODE"
+            echo "Время ответа: ${RESPONSE_TIME} секунд"
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          elif [ "$HTTP_CODE" = "000" ]; then
+            echo "❌ Не удалось подключиться к Серверу 2"
+            echo "status=connection_failed" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Сервер 2 вернул код: $HTTP_CODE"
+            echo "status=http_error" >> $GITHUB_OUTPUT
+            echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          fi
+
+      # Шаг 4: Отчет о выполнении
+      - name: 📊 Показать итоговый отчет
+        if: always()  # Выполняется всегда, даже если были ошибки
+        run: |
+          echo ""
+          echo "========================================="
+          echo "           📋 ИТОГОВЫЙ ОТЧЕТ"
+          echo "========================================="
+          echo ""
+          echo "🕐 Время выполнения: $(date)"
+          echo "🌍 Часовой пояс: ${{ env.TIMEZONE }}"
+          echo "⏰ Локальное время МСК: ${{ steps.check_time.outputs.msk_time || 'N/A' }}"
+          echo ""
+          echo "📡 СТАТУС СЕРВЕРОВ:"
+          echo "-------------------"
+
+          # Статус Сервера 1
+          if [ -n "${{ steps.ping_server_1.outputs.status }}" ]; then
+            echo "Сервер 1: ${{ steps.ping_server_1.outputs.status }}"
+            if [ "${{ steps.ping_server_1.outputs.http_code }}" != "" ]; then
+              echo "  HTTP код: ${{ steps.ping_server_1.outputs.http_code }}"
+            fi
+            if [ "${{ steps.ping_server_1.outputs.response_time }}" != "" ]; then
+              echo "  Время ответа: ${{ steps.ping_server_1.outputs.response_time }}с"
+            fi
+          else
+            echo "Сервер 1: Не запускался"
+          fi
+
+          echo ""
+
+          # Статус Сервера 2
+          if [ -n "${{ steps.ping_server_2.outputs.status }}" ]; then
+            echo "Сервер 2: ${{ steps.ping_server_2.outputs.status }}"
+            if [ "${{ steps.ping_server_2.outputs.http_code }}" != "" ]; then
+              echo "  HTTP код: ${{ steps.ping_server_2.outputs.http_code }}"
+            fi
+          else
+            echo "Сервер 2: Не запускался"
+          fi
+
+          echo ""
+          echo "========================================="
+
+          # Проверяем, были ли критические ошибки
+          if [ "${{ steps.ping_server_1.outputs.status }}" = "error" ] || \
+             [ "${{ steps.ping_server_1.outputs.status }}" = "failed" ] || \
+             [ "${{ steps.ping_server_2.outputs.status }}" = "connection_failed" ]; then
+            echo "⚠️ Есть проблемы с подключением!"
+          else
+            echo "✅ Все проверки завершены"
+          fi
+
+      # Шаг 5: Уведомление об ошибках (опционально)
+      - name: 🚨 Отправить уведомление при критических ошибках
+        if: failure()  # Только если workflow завершился с ошибкой
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const server1Status = "${{ steps.ping_server_1.outputs.status }}";
+            const server2Status = "${{ steps.ping_server_2.outputs.status }}";
+
+            let errorMessage = "❌ Критическая ошибка в поддержании серверов!\n\n";
+            errorMessage += `Workflow: ${context.workflow}\n`;
+            errorMessage += `Запуск: ${context.runId}\n`;
+            errorMessage += `Время: ${new Date().toLocaleString()}\n\n`;
+
+            if (server1Status === 'error' || server1Status === 'failed') {
+              errorMessage += "🔴 Сервер 1: Не удалось подключиться\n";
+            }
+            if (server2Status === 'connection_failed') {
+              errorMessage += "🔴 Сервер 2: Не удалось подключиться\n";
+            }
+
+            // Создаем issue в репозитории
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Ошибка поддержания серверов',
+              body: errorMessage,
+              labels: ['server-alert', 'automation']
+            });
+
+            console.log("Уведомление отправлено");
+
+      # Шаг 6: Сообщение о пропуске (если не рабочее время)
+      - name: 💤 Пропуск (не рабочее время)
+        if: steps.check_time.outputs.should_ping == 'false' && github.event_name == 'schedule'
+        run: |
+          echo ""
+          echo "========================================="
+          echo "           💤 РАБОЧИЙ ДЕНЬ ЗАВЕРШЕН"
+          echo "========================================="
+          echo ""
+          echo "Сейчас ${{ steps.check_time.outputs.msk_time }}:00 по Москве"
+          echo "Рабочие часы: 8:00 - 20:00 МСК"
+          echo ""
+          echo "Следующий пинг будет в рабочее время."
+          echo "Чтобы запустить принудительно, нажмите:"
+          echo "1. Вкладка 'Actions'"
+          echo "2. Выберите этот workflow"
+          echo "3. Нажмите 'Run workflow'"
+          echo "4. Поставьте 'skip_time_check: true'"
+          echo ""
+          echo "========================================="
